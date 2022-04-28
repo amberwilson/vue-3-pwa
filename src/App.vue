@@ -5,7 +5,8 @@ export default {
     todos: [],
     newTodo: '',
     editedTodo: null,
-    visibility: 'all'
+    visibility: 'all',
+    database: null,
   }),
 
   computed: {
@@ -75,6 +76,20 @@ export default {
       this.editedTodo = todo
     },
 
+    async getDatabase() {
+      return new Promise((resolve, reject) => {
+        let request = window.indexedDB.open('todomvcDB', 1);
+        request.onerror = event => {
+          console.error('ERROR: Unable to open database', event);
+          reject('Error');
+        };
+        request.onsuccess = event => {
+          this.database = event.target.result;
+          resolve(this.database);
+        };
+      });
+    },
+
     pluralize(word, count) {
       return word + (count === 1 ? '' : 's')
     },
@@ -101,48 +116,26 @@ export default {
   <section class="todoapp">
     <header class="header">
       <h1>todos</h1>
-      <input
-        class="new-todo"
-        autofocus
-        autocomplete="off"
-        placeholder="What needs to be done?"
-        v-model="newTodo"
-        @keyup.enter="addTodo"
-      />
+      <h2>Database</h2>
+      <p>{{ database }}</p>
+      <button @click="getDatabase">Get Database</button>
+      <input class="new-todo" autofocus autocomplete="off" placeholder="What needs to be done?"
+        v-model="newTodo" @keyup.enter="addTodo" />
     </header>
     <section class="main" v-show="todos.length">
-      <input
-        id="toggle-all"
-        class="toggle-all"
-        type="checkbox"
-        v-model="allDone"
-      />
+      <input id="toggle-all" class="toggle-all" type="checkbox" v-model="allDone" />
       <label for="toggle-all">Mark all as complete</label>
       <ul class="todo-list">
-        <li
-          class="todo"
-          v-for="todo in filteredTodos"
-          :key="todo.id"
-          :class="{ completed: todo.completed, editing: todo == editedTodo }"
-        >
+        <li class="todo" v-for="todo in filteredTodos" :key="todo.id"
+          :class="{ completed: todo.completed, editing: todo == editedTodo }">
           <div class="view">
-            <input
-              class="toggle"
-              type="checkbox"
-              @click="updateTodo(todo)"
-              :checked="todo.completed"
-            />
+            <input class="toggle" type="checkbox" @click="updateTodo(todo)"
+              :checked="todo.completed" />
             <label @dblclick="editTodo(todo)">{{ todo.title }}</label>
             <button class="destroy" @click="removeTodo(todo)"></button>
           </div>
-          <input
-            class="edit"
-            type="text"
-            v-model="todo.title"
-            @blur="doneEdit(todo)"
-            @keyup.enter="doneEdit(todo)"
-            @keyup.esc="cancelEdit(todo)"
-          />
+          <input class="edit" type="text" v-model="todo.title" @blur="doneEdit(todo)"
+            @keyup.enter="doneEdit(todo)" @keyup.esc="cancelEdit(todo)" />
         </li>
       </ul>
     </section>
@@ -153,38 +146,25 @@ export default {
       </span>
       <ul class="filters">
         <li>
-          <button
-            @click="visibility = 'all'"
-            :class="{ selected: visibility == 'all' }"
-            class="btn"
-          >
+          <button @click="visibility = 'all'" :class="{ selected: visibility == 'all' }"
+            class="btn">
             All
           </button>
         </li>
         <li>
-          <button
-            @click="visibility = 'active'"
-            :class="{ selected: visibility == 'active' }"
-            class="btn"
-          >
+          <button @click="visibility = 'active'" :class="{ selected: visibility == 'active' }"
+            class="btn">
             Active
           </button>
         </li>
         <li>
-          <button
-            @click="visibility = 'completed'"
-            :class="{ selected: visibility == 'completed' }"
-            class="btn"
-          >
+          <button @click="visibility = 'completed'" :class="{ selected: visibility == 'completed' }"
+            class="btn">
             Completed
           </button>
         </li>
       </ul>
-      <button
-        class="clear-completed"
-        @click="removeCompleted"
-        v-show="todos.length > remaining"
-      >
+      <button class="clear-completed" @click="removeCompleted" v-show="todos.length > remaining">
         Clear completed
       </button>
     </footer>
