@@ -79,13 +79,49 @@ export default {
     async getDatabase() {
       return new Promise((resolve, reject) => {
         let request = window.indexedDB.open('todomvcDB', 1);
+
         request.onerror = event => {
           console.error('ERROR: Unable to open database', event);
           reject('Error');
         };
+
         request.onsuccess = event => {
           this.database = event.target.result;
           resolve(this.database);
+        };
+
+        request.onupgradeneeded = event => {
+          let database = event.target.result;
+          console.log(database.createObjectStore('todos', {
+            autoIncrement: true,
+            keyPath: 'id',
+          }));
+        };
+      });
+    },
+
+    async getTodoStore() {
+      this.database = await this.getDatabase();
+
+      return new Promise((resolve, reject) => {
+        const transaction = this.database.transaction('todos', 'readonly');
+        const store = transaction.objectStore('todos');
+
+        let todoList = [];
+        store.openCursor().onsuccess = event => {
+          const cursor = event.target.result;
+          if (cursor) {
+            todoList.push(cursor.value);
+            cursor.continue()
+          }
+        };
+
+        transaction.oncomplete = () => {
+          resolve(todoList);
+        };
+
+        transaction.onerror = event => {
+          reject(event);
         };
       });
     },
@@ -108,7 +144,10 @@ export default {
     updateTodo(todo) {
       this.todos.find(item => item === todo).completed = !todo.completed
     }
-  }
+  },
+  async created(){
+    this.todos = await this.getTodoStore();
+  },
 }
 </script>
 
